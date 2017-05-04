@@ -1,0 +1,86 @@
+---
+Title: "Prediction Assignment Writeup: Coursera: Practical Machine Learning Project"
+Author: "Vagmita Pabuwal"
+Date: "May 3, 2017"
+---
+Introduction: Use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.
+
+DATA PROCESSING AND ANALYSIS.
+
+A:Load the data  have saved the files locally so I am not using the URLs. I will be using RandomForest and cross validation, for the analysis so loading the library accordingly.
+
+B:Clean the Data: If we liook at data we nneed to Remove the fields with Zero Val also The first 7 columns are not contributing towards prediction so will remove them as well.
+
+C:Divide the data in train and validation set with classe variable as definer.
+
+D:Apply cross validation using K value to be 5.
+
+E:Apply Random Forest Analysis.
+
+F:Review the results and Apply the best for test set for the quiz.
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(randomForest)
+library(RColorBrewer)
+trainset <- read.csv("pml-training.csv", na.strings=c("NA",""))
+testset <- read.csv("pml-testing.csv", na.strings = c("NA",""))
+trainset <- trainset[, colSums(is.na(trainset))==0]
+testset <- testset[, colSums(is.na(testset))==0]
+train_set <- trainset[, -c(1:7)]
+test_set <- testset[, -c(1:7)]
+dim(train_set) ; dim(test_set)
+```
+
+Now I will use the create partition function from the caret package and divide training data in training and validation for our analysis using clustering and random forest.
+
+```{r}
+inTrain <- createDataPartition(train_set$classe, p=0.7, list=FALSE)
+train <- train_set[inTrain, ]
+valid <- train_set[-inTrain, ]
+dim(train); dim(testset); dim(valid);
+```
+
+Now I perform the cross validation classification on the training and the validation set predicting on the classe variable
+
+
+```{r}
+control <- trainControl(method="cv", number=5)
+fit_rpart <- train(classe ~ ., data=train, method="rpart", trControl= control)
+print(fit_rpart, digits=4)
+```
+
+```{r pressure, echo=FALSE}
+fancyRpartPlot(fit_rpart$finalModel)
+```
+
+ #use the valid set and use confusion matrix for stats
+```{r}
+ predict_rpart <- predict(fit_rpart, valid)
+(conf_rpart <- confusionMatrix(valid$classe, predict_rpart))
+```
+
+Thus Accuracy  was just 0.497, only 50% and the error rate would be ~50% Not so good model to predict the outcome for classe
+Calculating Accuracy.
+
+```{r}
+(accuracy_rpart <- conf_rpart$overall[1])
+```
+
+Now applying Random Forest Algorithm to the training and the validation dataset
+
+```{r}
+fit_rf <- train(classe ~ ., data=train, method = "rf", trControl = control)
+print(fit_rf, digits=4)
+predict_rf <- predict(fit_rf, valid)
+(conf_rf <- confusionMatrix(valid$classe, predict_rf))
+(accuracy_rf <- conf_rf$overall[1])
+```
+
+Here we see the accuracy is .995 making error rate to be 0.004. Definitely RF works better being a supervised learning algorithm and giving a better classfier then cross validation using K clustering which is not able to classify as distinct.
+
+Now we can analyze the Test Set for the quiz question
